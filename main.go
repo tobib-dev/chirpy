@@ -1,15 +1,14 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 )
 
-func readinessHandler(w http.ResponseWriter, r *http.Request) {
+func handlerReadiness(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(200)
-	fmt.Fprint(w, "OK")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(http.StatusText(http.StatusOK)))
 }
 
 func main() {
@@ -18,7 +17,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/app/", http.StripPrefix("/app/", http.FileServer(http.Dir(filepathRoot))))
-	mux.HandleFunc("/healthz", readinessHandler)
+	mux.HandleFunc("/healthz", handlerReadiness)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
