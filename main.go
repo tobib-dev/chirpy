@@ -1,18 +1,24 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 )
 
+func readinessHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(200)
+	fmt.Fprint(w, "OK")
+}
+
 func main() {
 	const filepathRoot = "."
 	const port = "8080"
-	const logoPath = "/assets/logo.png"
 
 	mux := http.NewServeMux()
-	mux.Handle("/", http.FileServer(http.Dir(filepathRoot)))
-	mux.Handle("assets/logo.png", http.FileServer(http.Dir(logoPath)))
+	mux.Handle("/app/", http.StripPrefix("/app/", http.FileServer(http.Dir(filepathRoot))))
+	mux.HandleFunc("/healthz", readinessHandler)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
