@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strings"
 )
 
@@ -36,12 +37,10 @@ func handlerChirpsValidate(w http.ResponseWriter, r *http.Request) {
 
 	for i, word := range chirpWords {
 		isProfane := false
-		for _, prof := range profane {
-			if strings.ToLower(word) == prof {
-				isProfane = true
-				break
-			}
+		if slices.Contains(profane, strings.ToLower(word)) {
+			isProfane = true
 		}
+
 		if isProfane {
 			bodyList[i] = "****"
 		} else {
