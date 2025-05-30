@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/tobib-dev/chirpy/internal/database"
 )
 
 func (cfg *apiConfig) handlerCreateUsers(w http.ResponseWriter, r *http.Request) {
@@ -27,9 +26,7 @@ func (cfg *apiConfig) handlerCreateUsers(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusInternalServerError, "couldn't decode user request", err)
 	}
 
-	user, err := cfg.db.CreateUser(r.Context(), database.CreateUserParams{
-		Email: params.Email,
-	})
+	user, err := cfg.db.CreateUser(r.Context(), params.Email)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "couldn't create user profile", err)
 	}

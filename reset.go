@@ -1,6 +1,8 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+)
 
 func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
 	if cfg.platform != "dev" {
@@ -10,6 +12,4 @@ func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "unable to reset database", err)
 	}
-
-	respon
 }
