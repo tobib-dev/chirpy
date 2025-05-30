@@ -8,39 +8,42 @@ import (
 	"github.com/google/uuid"
 )
 
+type User struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
+}
+
 func (cfg *apiConfig) handlerCreateUsers(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Email string `json:"email"`
 	}
 
-	type User struct {
-		ID        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Email     string    `json:"email"`
+	type response struct {
+		User
 	}
+
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
 	err := decoder.Decode(&params)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "couldn't decode user request", err)
+		respondWithError(w, http.StatusInternalServerError, "couldn't decode parameters", err)
+		return
 	}
 
 	user, err := cfg.db.CreateUser(r.Context(), params.Email)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "couldn't create user profile", err)
+		return
 	}
 
-	successResp := User{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
-	}
-
-	_, err = json.Marshal(successResp)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "couldn't return user profile", err)
-	}
-	respondWithJSON(w, http.StatusCreated, successResp)
+	respondWithJSON(w, http.StatusCreated, response{
+		User: User{
+			ID:        user.ID,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+			Email:     user.Email,
+		},
+	})
 }
