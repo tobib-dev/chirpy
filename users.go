@@ -38,9 +38,9 @@ func (cfg *apiConfig) handlerCreateUsers(w http.ResponseWriter, r *http.Request)
 		Email:     user.Email,
 	}
 
-	data, err := json.Marshal(successResp)
+	_, err = json.Marshal(successResp)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "couldn't return user profile", err)
 	}
-	respondWithJSON(w, http.StatusOK, data)
+	respondWithJSON(w, http.StatusCreated, successResp)
 }
