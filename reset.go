@@ -6,10 +6,18 @@ import (
 
 func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
 	if cfg.platform != "dev" {
-		respondWithError(w, http.StatusForbidden, "cannot reset database outside dev environment", nil)
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("Reset is only allowed in dev environment."))
+		return
 	}
-	err := cfg.db.DeleteUsers(r.Context())
+
+	cfg.fileserverHits.Store(0)
+	err := cfg.db.Reset(r.Context())
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "unable to reset database", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Failed to reset the database: " + err.Error()))
+		return
 	}
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Hits reset to 0 and database reset to initial state."))
 }
