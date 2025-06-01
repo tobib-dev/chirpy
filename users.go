@@ -15,6 +15,7 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Password  string    `json:"-"`
 }
 
 func (cfg *apiConfig) handlerCreateUsers(w http.ResponseWriter, r *http.Request) {
@@ -51,46 +52,6 @@ func (cfg *apiConfig) handlerCreateUsers(w http.ResponseWriter, r *http.Request)
 	}
 
 	respondWithJSON(w, http.StatusCreated, response{
-		User: User{
-			ID:        user.ID,
-			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt,
-			Email:     user.Email,
-		},
-	})
-}
-
-func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
-	type paramaters struct {
-		Password string `json:"password"`
-		Email    string `json:"email"`
-	}
-
-	type response struct {
-		User
-	}
-
-	params := paramaters{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&params)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "couldn't decode parameters", err)
-		return
-	}
-
-	user, err := cfg.db.GetUserByEmail(r.Context(), params.Email)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "couldn't find user", err)
-		return
-	}
-
-	err = auth.CheckPasswordHash(user.HashedPassword, params.Password)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, response{
 		User: User{
 			ID:        user.ID,
 			CreatedAt: user.CreatedAt,
