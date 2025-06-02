@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -28,9 +29,31 @@ func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (str
 	claims := &jwt.RegisteredClaims{
 		Issuer:    "chirpy",
 		IssuedAt:  time.Now().UTC(),
-		ExpiresAt: time.Now().add(expiresIn),
+		ExpiresAt: time.Now().Add(expiresIn),
 		Subject:   userID.String(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(tokenSecret)
+}
+
+func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
+	keyFunc := func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Invalid method: %v", token.Header["alg"])
+		}
+		return []byte(tokenSecret), nil
+	}
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, keyFunc)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("Invalid tokenString")
+	}
+	claims, ok := token.Claims.(*jwt.RegisteredClaims)
+	if !ok {
+		return uuid.Nil, fmt.Errorf("Invalid claim")
+	}
+	userID, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("Invalid UUID")
+	}
+	return userID, nil
 }
