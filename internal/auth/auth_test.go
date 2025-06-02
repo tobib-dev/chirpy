@@ -78,63 +78,47 @@ func TestCheckPasswordHash(t *testing.T) {
 
 func TestMakeValidateJWT(t *testing.T) {
 	id1 := uuid.New()
-	id2 := uuid.New()
-	id3 := uuid.New()
-
-	secret1 := "gY8vFzM9L1bXnqC7sZ0eT2dPaRmVkWjU"
-	secret2 := "tQ4eYkH7cLpXvRgZwN1oDbMuA6sJfB2K"
-	secret3 := "Zx9VrEwTbG5mKoYqNdSfApLuQ3cXnJ7M"
-
-	expiresHour := time.Hour * 1
-	expiresMinute := time.Minute * 30
-	expiresSeconds := time.Second * 45
-
-	token1, _ := MakeJWT(id1, secret1, expiresHour)
-	token2, _ := MakeJWT(id2, secret2, expiresMinute)
-	token3, _ := MakeJWT(id3, secret3, expiresSeconds)
+	token1, _ := MakeJWT(id1, "secret", time.Hour)
 
 	cases := []struct {
-		name          string
-		inputID       uuid.UUID
-		inputSecret   string
-		expectedToken string
-		wantErr       bool
+		name        string
+		tokenSecret string
+		tokenString string
+		wantUserID  uuid.UUID
+		wantErr     bool
 	}{
 		{
-			name:          "Correct id",
-			inputID:       id1,
-			inputSecret:   secret1,
-			expectedToken: token1,
-			wantErr:       false,
+			name:        "Valid token",
+			tokenSecret: "secret",
+			tokenString: token1,
+			wantUserID:  id1,
+			wantErr:     false,
 		},
 		{
-			name:          "Incorrect id",
-			inputID:       id2,
-			inputSecret:   secret2,
-			expectedToken: token3,
-			wantErr:       true,
+			name:        "Invalid token",
+			tokenSecret: "secret",
+			tokenString: "invalid.token.string",
+			wantUserID:  uuid.Nil,
+			wantErr:     true,
 		},
 		{
-			name:          "Empty id",
-			inputID:       uuid.Nil,
-			inputSecret:   secret1,
-			expectedToken: token2,
-			wantErr:       true,
-		},
-		{
-			name:          "Invalid Token",
-			inputID:       id3,
-			inputSecret:   secret3,
-			expectedToken: "invalid token",
-			wantErr:       true,
+			name:        "Wrong secret",
+			tokenSecret: "wrong_secret",
+			tokenString: token1,
+			wantUserID:  uuid.Nil,
+			wantErr:     true,
 		},
 	}
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			_, err := ValidateJWT(c.expectedToken, c.inputSecret)
+			gotUserID, err := ValidateJWT(c.tokenString, c.tokenSecret)
 			if (err != nil) != c.wantErr {
 				t.Errorf("ValidateJWT() error = %v, wantErr %v", err, c.wantErr)
+				return
+			}
+			if gotUserID != c.wantUserID {
+				t.Errorf("ValidateJWT() gotUserID = %v, want %v", gotUserID, c.wantUserID)
 			}
 		})
 	}
