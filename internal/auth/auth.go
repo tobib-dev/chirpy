@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang-jwt/jwt"
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -28,12 +26,12 @@ func CheckPasswordHash(hash, password string) error {
 func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
 	claims := &jwt.RegisteredClaims{
 		Issuer:    "chirpy",
-		IssuedAt:  time.Now().UTC(),
-		ExpiresAt: time.Now().Add(expiresIn),
+		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresIn)),
 		Subject:   userID.String(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(tokenSecret)
+	return token.SignedString([]byte(tokenSecret))
 }
 
 func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
