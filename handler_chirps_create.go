@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/tobib-dev/chirpy/internal/auth"
 	"github.com/tobib-dev/chirpy/internal/database"
 )
 
@@ -21,8 +22,8 @@ type Chirp struct {
 
 func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Body   string    `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
+		Token  string    `json:"token"`
 	}
 
 	type response struct {
@@ -37,22 +38,27 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	cleaned, err := validateChirp(params.Body)
+	cleaned, err := validateChirp(params.Token)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error(), err)
 		return
 	}
 
-	/*
-		 * user, err := cfg.db.GetUser(r.Context(), params.UserID)
-			if err != nil {
-				respondWithError(w, http.StatusNotFound, "couldn't get user profile", err)
-			}
-	*/
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "couldn't get secret token", err)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(tokenString, cfg.serverToken)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid token", err)
+		return
+	}
 
 	chirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body:   cleaned,
-		UserID: params.UserID,
+		UserID: userID,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create chirp", err)
@@ -65,7 +71,7 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 			CreatedAt: chirp.CreatedAt,
 			UpdatedAt: chirp.UpdatedAt,
 			Body:      chirp.Body,
-			UserID:    chirp.UserID,
+			UserID:    userID,
 		},
 	})
 }
