@@ -3,6 +3,8 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -16,6 +18,8 @@ const (
 	// TokenTypeAccess
 	TokenTypeAccess TokenType = "chipry-access"
 )
+
+var ErrNoAuthHeaderIncluded = errors.New("no auth header included in request")
 
 func HashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -69,4 +73,18 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("invalid user ID: %w", err)
 	}
 	return id, nil
+}
+
+func GetBearerToken(headers http.Header) (string, error) {
+	auth := headers.Get("Authorization")
+	if auth == "" {
+		return "", ErrNoAuthHeaderIncluded
+	}
+
+	authList := strings.Split(auth, " ")
+	if len(authList) != 2 || authList[0] != "Bearer" {
+		return "", errors.New("bad authorization header.")
+	}
+
+	return authList[1], nil
 }

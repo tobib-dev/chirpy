@@ -17,6 +17,8 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 
 	type response struct {
 		User
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	params := paramaters{}
@@ -27,8 +29,9 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if params.ExpiresInSeconds == 0 || params.ExpiresInSeconds > 3600 {
-		params.ExpiresInSeconds = 3600
+	expirationTime := time.Hour
+	if params.ExpiresInSeconds > 0 && params.ExpiresInSeconds < 3600 {
+		expirationTime = time.Duration(params.ExpiresInSeconds) * time.Second
 	}
 
 	user, err := cfg.db.GetUserByEmail(r.Context(), params.Email)
@@ -43,7 +46,7 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenString, err := auth.MakeJWT(user.ID, cfg.serverToken, time.Duration(params.ExpiresInSeconds)*time.Second)
+	tokenString, err := auth.MakeJWT(user.ID, cfg.serverToken, expirationTime)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect secret token", err)
 		return
@@ -51,9 +54,11 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 
 	respondWithJSON(w, http.StatusOK, response{
 		User: User{
-			ID:    user.ID,
-			Email: user.Email,
-			Token: tokenString,
+			ID:        user.ID,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+			Email:     user.Email,
 		},
+		Token: tokenString,
 	})
 }
