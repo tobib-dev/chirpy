@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -122,4 +123,57 @@ func TestMakeValidateJWT(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetBearerToken(t *testing.T) {
+	validHeader := http.Header{}
+	validHeader.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0IiwiaXNzIjoiQ2hpcnB5QXBwIn0.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
+	validTokenString, _ := GetBearerToken(validHeader)
+
+	noBearer := http.Header{}
+	noBearer.Set("Authorization", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0IiwiaXNzIjoiQ2hpcnB5QXBwIn0")
+
+	doubleSpaced := http.Header{}
+	doubleSpaced.Set("Authorization", "Bearer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0IiwiaXNzIjoiQ2hpcnB5QXBwIn0")
+
+	cases := []struct {
+		name            string
+		header          http.Header
+		wantTokenString string
+		wantErr         bool
+	}{
+		{
+			name:            "Valid Token",
+			header:          validHeader,
+			wantTokenString: validTokenString,
+			wantErr:         false,
+		},
+		{
+			name:            "No Bearer Header",
+			header:          noBearer,
+			wantTokenString: "",
+			wantErr:         true,
+		},
+		{
+			name:            "Double Spaced Header",
+			header:          doubleSpaced,
+			wantTokenString: "",
+			wantErr:         true,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			gotTokenString, err := GetBearerToken(c.header)
+			if (err != nil) != c.wantErr {
+				t.Errorf("GetBearerToken() error = %v, wantErr %v", err, c.wantErr)
+				return
+			}
+			if gotTokenString != c.wantTokenString {
+				t.Errorf("GetBearerToken() gotTokenString = %v, wantTokenString %v", gotTokenString, c.wantTokenString)
+				return
+			}
+		})
+	}
+
 }

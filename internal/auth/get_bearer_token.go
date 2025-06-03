@@ -13,5 +13,5 @@ func GetBearerToken(headers http.Header) (string, error) {
 	if len(authList) != 2 || authList[1] == "" || authList[0] != "Bearer" {
 		return "", fmt.Errorf("couldn't find authorization header.")
 	}
-	return authList[2], nil
+	return authList[1], nil
 }
