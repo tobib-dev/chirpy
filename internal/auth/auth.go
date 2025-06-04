@@ -1,10 +1,10 @@
 package auth
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"strings"
 	"time"

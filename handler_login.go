@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -45,23 +44,26 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	expirationAT := time.Duration(time.Hour)
 	tokenString, err := auth.MakeJWT(user.ID, cfg.serverToken, expirationAT)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Incorrect secret token", err)
+		respondWithError(w, http.StatusInternalServerError, "Couldn't create access JWT", err)
 		return
 	}
 
 	rTokenString, err := auth.MakeRefreshToken()
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "We hit a snag", err)
+		respondWithError(w, http.StatusInternalServerError, "Couldn't create refresh token", err)
 		return
 	}
 
 	expirationRT := time.Now().Add(time.Hour * 24 * 60)
-	err = cfg.db.SaveToken(r.Context(), database.SaveTokenParams{
+	_, err = cfg.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
 		Token:     rTokenString,
 		UserID:    user.ID,
 		ExpiresAt: expirationRT,
-		RevokedAt: sql.NullTime{},
 	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "couldn't save refresh token", err)
+		return
+	}
 
 	respondWithJSON(w, http.StatusOK, response{
 		User: User{
