@@ -24,9 +24,15 @@ func (cfg *apiConfig) handlerRefreshToken(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	accessToken, err := auth.MakeJWT(rToken.UserID, cfg.serverToken, time.Duration(time.Hour))
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "couldn't generate JWT", err)
+		return
+	}
+
 	type response struct {
 		Token string `json:"token"`
 	}
 
-	respondWithJSON(w, http.StatusOK, response{Token: rToken.Token})
+	respondWithJSON(w, http.StatusOK, response{Token: accessToken})
 }
