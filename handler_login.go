@@ -1,18 +1,19 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/tobib-dev/chirpy/internal/auth"
+	"github.com/tobib-dev/chirpy/internal/database"
 )
 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	type paramaters struct {
-		Password         string        `json:"password"`
-		Email            string        `json:"email"`
-		ExpiresInSeconds time.Duration `json:"expires_in_seconds"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
 	}
 
 	type response struct {
@@ -29,11 +30,6 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expirationTime := time.Hour
-	if params.ExpiresInSeconds > 0 && params.ExpiresInSeconds < 3600 {
-		expirationTime = time.Duration(params.ExpiresInSeconds) * time.Second
-	}
-
 	user, err := cfg.db.GetUserByEmail(r.Context(), params.Email)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
@@ -46,11 +42,26 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenString, err := auth.MakeJWT(user.ID, cfg.serverToken, expirationTime)
+	expirationAT := time.Duration(time.Hour)
+	tokenString, err := auth.MakeJWT(user.ID, cfg.serverToken, expirationAT)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect secret token", err)
 		return
 	}
+
+	rTokenString, err := auth.MakeRefreshToken()
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "We hit a snag", err)
+		return
+	}
+
+	expirationRT := time.Now().Add(time.Hour * 24 * 60)
+	err = cfg.db.SaveToken(r.Context(), database.SaveTokenParams{
+		Token:     tokenString,
+		UserID:    user.ID,
+		ExpiresAt: expirationRT,
+		RevokedAt: sql.NullTime{},
+	})
 
 	respondWithJSON(w, http.StatusOK, response{
 		User: User{
@@ -59,6 +70,7 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 			UpdatedAt: user.UpdatedAt,
 			Email:     user.Email,
 		},
-		Token: tokenString,
+		Token:        tokenString,
+		RefreshToken: rTokenString,
 	})
 }
