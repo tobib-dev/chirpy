@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"net/http"
 	"time"
 
@@ -15,12 +16,16 @@ func (cfg *apiConfig) handlerRefreshToken(w http.ResponseWriter, r *http.Request
 	}
 
 	rToken, err := cfg.db.GetToken(r.Context(), bearerToken)
+	if err == sql.ErrNoRows {
+		respondWithError(w, http.StatusUnauthorized, "tokens does not exist", err)
+		return
+	}
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "couldn't get refresh tokens", err)
 		return
 	}
-	if rToken.ExpiresAt.Before(time.Now()) {
-		respondWithError(w, http.StatusUnauthorized, "token is expired, please update JWT", err)
+	if rToken.ExpiresAt.Before(time.Now()) || rToken.RevokedAt.Valid {
+		respondWithError(w, http.StatusUnauthorized, "token is expired or revoked", err)
 		return
 	}
 

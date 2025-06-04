@@ -12,3 +12,8 @@ VALUES (
 -- name: GetToken :one
 SELECT * FROM refresh_tokens
 WHERE token = $1;
+
+-- name: UpdateToken :exec
+UPDATE refresh_tokens
+SET updated_at = $2, revoked_at = $3
+WHERE token = $1;

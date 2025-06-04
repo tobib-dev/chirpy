@@ -60,3 +60,20 @@ func (q *Queries) SaveToken(ctx context.Context, arg SaveTokenParams) error {
 	)
 	return err
 }
+
+const updateToken = `-- name: UpdateToken :exec
+UPDATE refresh_tokens
+SET updated_at = $2, revoked_at = $3
+WHERE token = $1
+`
+
+type UpdateTokenParams struct {
+	Token     string
+	UpdatedAt time.Time
+	RevokedAt sql.NullTime
+}
+
+func (q *Queries) UpdateToken(ctx context.Context, arg UpdateTokenParams) error {
+	_, err := q.db.ExecContext(ctx, updateToken, arg.Token, arg.UpdatedAt, arg.RevokedAt)
+	return err
+}
