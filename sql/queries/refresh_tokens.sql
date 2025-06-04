@@ -8,3 +8,7 @@ VALUES (
     $3,
     $4
 );
+
+-- name: GetToken :one
+SELECT * FROM refresh_tokens
+WHERE token = $1;

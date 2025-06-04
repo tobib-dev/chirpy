@@ -57,7 +57,7 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 
 	expirationRT := time.Now().Add(time.Hour * 24 * 60)
 	err = cfg.db.SaveToken(r.Context(), database.SaveTokenParams{
-		Token:     tokenString,
+		Token:     rTokenString,
 		UserID:    user.ID,
 		ExpiresAt: expirationRT,
 		RevokedAt: sql.NullTime{},
