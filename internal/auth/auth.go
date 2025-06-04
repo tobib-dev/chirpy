@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/exp/rand"
 )
 
 type TokenType string
@@ -87,4 +89,12 @@ func GetBearerToken(headers http.Header) (string, error) {
 	}
 
 	return authList[1], nil
+}
+
+func MakeRefreshToken() (string, error) {
+	key := make([]byte, 32)
+	rand.Read(key)
+
+	tokenString := hex.EncodeToString(key)
+	return tokenString, nil
 }
