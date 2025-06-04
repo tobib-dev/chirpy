@@ -7,19 +7,31 @@ package database
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-const getToken = `-- name: GetToken :one
-SELECT token, created_at, updated_at, user_id, expires_at, revoked_at FROM refresh_tokens
-WHERE token = $1
+const createRefreshToken = `-- name: CreateRefreshToken :one
+INSERT INTO refresh_tokens (token, created_at, updated_at, user_id, expires_at)
+VALUES (
+    $1,
+    NOW(),
+    NOW(),
+    $2,
+    $3
+)
+RETURNING token, created_at, updated_at, user_id, expires_at, revoked_at
 `
 
-func (q *Queries) GetToken(ctx context.Context, token string) (RefreshToken, error) {
-	row := q.db.QueryRowContext(ctx, getToken, token)
+type CreateRefreshTokenParams struct {
+	Token     string
+	UserID    uuid.UUID
+	ExpiresAt time.Time
+}
+
+func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error) {
+	row := q.db.QueryRowContext(ctx, createRefreshToken, arg.Token, arg.UserID, arg.ExpiresAt)
 	var i RefreshToken
 	err := row.Scan(
 		&i.Token,
@@ -32,48 +44,44 @@ func (q *Queries) GetToken(ctx context.Context, token string) (RefreshToken, err
 	return i, err
 }
 
-const saveToken = `-- name: SaveToken :exec
-INSERT INTO refresh_tokens (token, created_at, updated_at, user_id, expires_at, revoked_at)
-VALUES (
-    $1,
-    NOW(),
-    NOW(),
-    $2,
-    $3,
-    $4
-)
+const getUserFromRefreshToken = `-- name: GetUserFromRefreshToken :one
+SELECT users.id, users.created_at, users.updated_at, users.email, users.hashed_password FROM users
+JOIN refresh_tokens ON users.id = refresh_tokens.user_id
+WHERE refresh_tokens.token = $1
+AND revoked_at IS NULL
+AND expires_at > NOW()
 `
 
-type SaveTokenParams struct {
-	Token     string
-	UserID    uuid.UUID
-	ExpiresAt time.Time
-	RevokedAt sql.NullTime
-}
-
-func (q *Queries) SaveToken(ctx context.Context, arg SaveTokenParams) error {
-	_, err := q.db.ExecContext(ctx, saveToken,
-		arg.Token,
-		arg.UserID,
-		arg.ExpiresAt,
-		arg.RevokedAt,
+func (q *Queries) GetUserFromRefreshToken(ctx context.Context, token string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserFromRefreshToken, token)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Email,
+		&i.HashedPassword,
 	)
-	return err
+	return i, err
 }
 
-const updateToken = `-- name: UpdateToken :exec
+const revokeRefreshToken = `-- name: RevokeRefreshToken :one
 UPDATE refresh_tokens
-SET updated_at = $2, revoked_at = $3
+SET updated_at = NOW(), revoked_at = NOW()
 WHERE token = $1
+RETURNING token, created_at, updated_at, user_id, expires_at, revoked_at
 `
 
-type UpdateTokenParams struct {
-	Token     string
-	UpdatedAt time.Time
-	RevokedAt sql.NullTime
-}
-
-func (q *Queries) UpdateToken(ctx context.Context, arg UpdateTokenParams) error {
-	_, err := q.db.ExecContext(ctx, updateToken, arg.Token, arg.UpdatedAt, arg.RevokedAt)
-	return err
+func (q *Queries) RevokeRefreshToken(ctx context.Context, token string) (RefreshToken, error) {
+	row := q.db.QueryRowContext(ctx, revokeRefreshToken, token)
+	var i RefreshToken
+	err := row.Scan(
+		&i.Token,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.UserID,
+		&i.ExpiresAt,
+		&i.RevokedAt,
+	)
+	return i, err
 }
