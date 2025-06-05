@@ -12,7 +12,7 @@ import (
 )
 
 const upgradeToChirpyRed = `-- name: UpgradeToChirpyRed :one
-UPDATE users SET is_chirpy_red = true
+UPDATE users SET is_chirpy_red = true, updated_at = NOW()
 WHERE id = $1
 RETURNING id, created_at, updated_at, email, hashed_password, is_chirpy_red
 `
