@@ -4,15 +4,39 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/tobib-dev/chirpy/internal/database"
 )
 
 func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request) {
-	chirpList, err := cfg.db.GetAllChirps(r.Context())
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't get all chirps", err)
-		return
-	}
+	authorID := r.URL.Query().Get("author_id")
+	if authorID == "" {
+		chirpList, err := cfg.db.GetAllChirps(r.Context())
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Couldn't get all chirps", err)
+			return
+		}
 
+		res := getResponseList(chirpList)
+		respondWithJSON(w, http.StatusOK, res)
+	} else {
+		aID, err := uuid.Parse(authorID)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "couldn't retrieve author id", err)
+			return
+		}
+
+		chirpList, err := cfg.db.GetAllChirpsForUser(r.Context(), aID)
+		if err != nil {
+			respondWithError(w, http.StatusNotFound, "couldn't find chirps", err)
+			return
+		}
+
+		res := getResponseList(chirpList)
+		respondWithJSON(w, http.StatusOK, res)
+	}
+}
+
+func getResponseList(chirpList []database.Chirp) []Chirp {
 	response := make([]Chirp, len(chirpList))
 	for i, chirp := range chirpList {
 		response[i] = Chirp{
@@ -23,8 +47,7 @@ func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request
 			UserID:    chirp.UserID,
 		}
 	}
-
-	respondWithJSON(w, http.StatusOK, response)
+	return response
 }
 
 func (cfg *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
