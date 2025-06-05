@@ -102,13 +102,13 @@ func MakeRefreshToken() (string, error) {
 func GetAPIKey(headers http.Header) (string, error) {
 	key := headers.Get("Authorization")
 	if key == "" {
-		return "", errors.New("No api key in authorization header")
+		return "", ErrNoAuthHeaderIncluded
 	}
 
-	splittedKey := strings.Split(key, " ")
-	if len(splittedKey) != 2 {
+	splitKey := strings.Split(key, " ")
+	if len(splitKey) != 2 || splitKey[0] != "ApiKey" {
 		return "", errors.New("Bad authorization header should contain description and key")
 	}
 
-	return splittedKey[1], nil
+	return splitKey[1], nil
 }

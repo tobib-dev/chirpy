@@ -24,7 +24,7 @@ func (cfg *apiConfig) handlerWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if cfg.polkaKey != apiKey {
-		respondWithError(w, http.StatusUnauthorized, "couldn't validate Polka API Keys", errors.New("You can't access this resource"))
+		respondWithError(w, http.StatusUnauthorized, "Polka API Keys is invalid", err)
 		return
 	}
 
